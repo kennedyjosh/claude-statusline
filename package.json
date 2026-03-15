@@ -1,0 +1,6 @@
+{
+  "name": "claude-statusline",
+  "version": "1.0.0",
+  "description": "Custom status line for Claude Code",
+  "bin": "statusline.sh"
+}
