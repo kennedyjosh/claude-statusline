@@ -7,9 +7,17 @@ used=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
 total=$(echo "$input" | jq -r '.context_window.context_window_size // empty')
 cost=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
 
-# Effort level from global settings (updated by Claude Code on /model changes)
-effort=$(jq -r '.effortLevel // empty' "$HOME/.claude/settings.json" 2>/dev/null)
-[ -z "$effort" ] && effort="?"
+# Effort level: parse from transcript JSONL (most recent /model change), fall back to settings.json
+transcript=$(echo "$input" | jq -r '.transcript_path // empty')
+effort=""
+if [ -n "$transcript" ] && [ -f "$transcript" ]; then
+  effort=$(tac "$transcript" | grep -oP 'Set model to[\s\S]*? with \K(low|medium|high|max)(?= effort)' -m1 2>/dev/null)
+fi
+if [ -z "$effort" ]; then
+  config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+  effort=$(jq -r '.effortLevel // empty' "$config_dir/settings.json" 2>/dev/null)
+fi
+[ -z "$effort" ] && effort="medium"
 
 # Git branch with status color
 ESC=$'\033'

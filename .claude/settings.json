@@ -1,6 +1,6 @@
 {
   "statusLine": {
     "type": "command",
-    "command": "npx -y github:kennedyjosh/claude-statusline"
+    "command": "bash ./statusline.sh"
   }
 }
