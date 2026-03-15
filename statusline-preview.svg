@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 36" width="720" height="36">
-  <rect width="720" height="36" fill="#f5f5f5" rx="4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 52" width="720" height="52">
+  <rect width="720" height="52" fill="#f5f5f5" rx="4"/>
 
-  <text font-family="'SF Mono', 'Fira Code', 'Cascadia Code', monospace" font-size="13" y="23" x="12">
+  <text font-family="'SF Mono', 'Fira Code', 'Cascadia Code', monospace" font-size="13" y="20" x="12">
     <tspan font-weight="bold" fill="#1a56db">Sonnet 4.6</tspan>
     <tspan> </tspan>
     <tspan font-style="italic" fill="#888888">medium</tspan>
@@ -10,5 +10,9 @@
     <tspan fill="#333333"> ⎇ </tspan>
     <tspan fill="#16a34a">main<animate attributeName="fill" calcMode="discrete" values="#16a34a;#dc2626;#ca8a04" dur="6s" repeatCount="indefinite"/></tspan>
     <tspan fill="#333333">  12k/200k (6%)  $0.04</tspan>
+  </text>
+
+  <text font-family="'SF Mono', 'Fira Code', 'Cascadia Code', monospace" font-size="13" y="43" x="12" fill="#333333">
+    <tspan>41% resets 2h34m · 9% resets 6d23h</tspan>
   </text>
 </svg>
