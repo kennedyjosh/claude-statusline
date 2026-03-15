@@ -1,24 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 36" width="640" height="36">
-  <rect width="640" height="36" fill="#f5f5f5" rx="4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 36" width="720" height="36">
+  <rect width="720" height="36" fill="#f5f5f5" rx="4"/>
 
-  <!-- Status line -->
   <text font-family="'SF Mono', 'Fira Code', 'Cascadia Code', monospace" font-size="13" y="23" x="12">
     <tspan font-weight="bold" fill="#1a56db">Sonnet 4.6</tspan>
-    <tspan fill="#1a56db"> </tspan>
-    <tspan font-style="italic" fill="#888888">normal</tspan>
-    <tspan fill="#888888"> </tspan>
+    <tspan> </tspan>
+    <tspan font-style="italic" fill="#888888">medium</tspan>
+    <tspan> </tspan>
     <tspan fill="#008700">/Users/josh/Code/myproject</tspan>
     <tspan fill="#333333"> ⎇ </tspan>
-  </text>
-
-  <!-- Branch name cycling through colors -->
-  <text font-family="'SF Mono', 'Fira Code', 'Cascadia Code', monospace" font-size="13" y="23" x="382">
-    <tspan>main</tspan>
-    <animate attributeName="fill" calcMode="discrete" values="#16a34a;#dc2626;#ca8a04" dur="6s" repeatCount="indefinite"/>
-  </text>
-
-  <!-- Remaining info -->
-  <text font-family="'SF Mono', 'Fira Code', 'Cascadia Code', monospace" font-size="13" y="23" x="418" fill="#333333">
-    <tspan>  12k/200k (6%)  $0.04</tspan>
+    <tspan fill="#16a34a">main<animate attributeName="fill" calcMode="discrete" values="#16a34a;#dc2626;#ca8a04" dur="6s" repeatCount="indefinite"/></tspan>
+    <tspan fill="#333333">  12k/200k (6%)  $0.04</tspan>
   </text>
 </svg>
