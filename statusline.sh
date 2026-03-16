@@ -128,6 +128,7 @@ print(int(parsedate_to_datetime(sys.argv[1]).timestamp()))
     server_time_file="$cache_dir/server-time"
     cache_mtime=$(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file" 2>/dev/null || echo 0)
     local_elapsed=$(( now - cache_mtime ))
+    [ "$local_elapsed" -lt 0 ] && local_elapsed=0
 
     usage_line=$(python3 -c "
 import json, datetime, sys, os
@@ -190,7 +191,9 @@ fi
 
 printf "\033[1;34m%s\033[0m \033[3;90m%s\033[0m \033[38;5;28m%s\033[0m%s %s %s" \
   "$model" "$effort" "$cwd" "$branch_part" "$context_part" "$cost_part"
-printf "\n%s" "$session_id"
+if [ -n "$session_id" ]; then
+  printf "\n%s" "$session_id"
+fi
 if [ -n "$usage_line" ]; then
   printf "\n%s" "$usage_line"
 fi
