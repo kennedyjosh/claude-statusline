@@ -8,7 +8,8 @@ eval "$(echo "$input" | jq -r '
   @sh "used=\(.context_window.used_percentage // "")",
   @sh "total=\(.context_window.context_window_size // "")",
   @sh "cost=\(.cost.total_cost_usd // "")",
-  @sh "transcript=\(.transcript_path // "")"
+  @sh "transcript=\(.transcript_path // "")",
+  @sh "session_id=\(.session_id // "")"
 ')"
 
 # Effort level: parse from transcript JSONL (most recent /model change), fall back to settings.json
@@ -168,6 +169,7 @@ fi
 
 printf "\033[1;34m%s\033[0m \033[3;90m%s\033[0m \033[38;5;28m%s\033[0m%s %s %s" \
   "$model" "$effort" "$cwd" "$branch_part" "$context_part" "$cost_part"
+printf "\n%s" "$session_id"
 if [ -n "$usage_line" ]; then
   printf "\n%s" "$usage_line"
 fi
