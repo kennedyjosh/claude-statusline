@@ -2,5 +2,18 @@
   "statusLine": {
     "type": "command",
     "command": "bash ./statusline.sh"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "If the tool input contains a git commit command, run /update-changelog first before allowing the commit. If it is not a git commit command, do nothing."
+          }
+        ]
+      }
+    ]
   }
 }
