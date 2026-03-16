@@ -106,6 +106,14 @@ if [ -n "$token" ]; then
     if echo "$response" | jq -e '.five_hour' >/dev/null 2>&1; then
       tmp_cache=$(mktemp "$cache_dir/usage.XXXXXX")
       echo "$response" > "$tmp_cache" && mv -f "$tmp_cache" "$cache_file"
+      # Save server time for accurate timer calculations
+      server_date=$(grep -i '^date:' "$headers_file" 2>/dev/null | tr -d '\r' | sed 's/^[Dd]ate: *//')
+      if [ -n "$server_date" ]; then
+        python3 -c "
+from email.utils import parsedate_to_datetime; import sys
+print(int(parsedate_to_datetime(sys.argv[1]).timestamp()))
+" "$server_date" 2>/dev/null > "$cache_dir/server-time"
+      fi
       rm -f "$rate_limit_file"
     elif echo "$response" | jq -e '.error.type == "rate_limit_error"' >/dev/null 2>&1; then
       retry_after=$(grep -i 'retry-after' "$headers_file" 2>/dev/null | tr -d '\r' | awk '{print $2}')
@@ -116,13 +124,26 @@ if [ -n "$token" ]; then
   fi
 
   if [ -f "$cache_file" ]; then
+    # Derive accurate current time: server_time + seconds_elapsed_since_cache
+    server_time_file="$cache_dir/server-time"
+    cache_mtime=$(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file" 2>/dev/null || echo 0)
+    local_elapsed=$(( now - cache_mtime ))
+
     usage_line=$(python3 -c "
-import json, datetime, sys
+import json, datetime, sys, os
 
 with open(sys.argv[1]) as f:
     data = json.load(f)
 
-now = datetime.datetime.now(datetime.timezone.utc)
+# Use server time + local elapsed for accurate 'now'
+server_time_file = sys.argv[3]
+local_elapsed = int(sys.argv[4])
+try:
+    with open(server_time_file) as f:
+        server_epoch = int(f.read().strip())
+    now = datetime.datetime.fromtimestamp(server_epoch + local_elapsed, tz=datetime.timezone.utc)
+except:
+    now = datetime.datetime.now(datetime.timezone.utc)
 
 def fmt_timer(total_secs):
     days, rem = divmod(total_secs, 86400)
@@ -163,7 +184,7 @@ except:
 
 if parts:
     print(' \u00b7 '.join(parts) + rate_limit_msg)
-" "$cache_file" "$rate_limit_file" 2>/dev/null)
+" "$cache_file" "$rate_limit_file" "$server_time_file" "$local_elapsed" 2>/dev/null)
   fi
 fi
 
