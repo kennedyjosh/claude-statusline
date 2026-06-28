@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Removed
+- Session ID line from statusline output
+
+### Fixed
+- Pre-commit hook no longer blocks all Bash commands; now only intercepts `git commit`
+
 ## [1.0.0] - 2026-03-16
 
 ### Added
