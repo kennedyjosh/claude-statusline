@@ -9,8 +9,8 @@
         "matcher": "Bash",
         "hooks": [
           {
-            "type": "prompt",
-            "prompt": "If the tool input contains a git commit command, run /update-changelog first before allowing the commit. If it is not a git commit command, do nothing."
+            "type": "command",
+            "command": "cmd=$(cat | jq -r '.command // \"\"'); if echo \"$cmd\" | grep -qE 'git[[:space:]]+commit'; then if ! git diff --cached --name-only 2>/dev/null | grep -q 'CHANGELOG.md'; then echo 'Run /update-changelog before committing.'; exit 2; fi; fi"
           }
         ]
       }
