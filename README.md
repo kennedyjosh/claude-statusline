@@ -1,12 +1,12 @@
 # claude-statusline
 
-A custom status line for [Claude Code](https://claude.ai/code) that displays model, effort level, working directory, git branch status, context window usage, session cost, and plan usage.
+A custom status line for [Claude Code](https://claude.ai/code) that displays model, effort level (with a `~` prefix when extended thinking is active), working directory, git branch status, context window usage, session cost, and plan usage.
 
 ## How it looks
 
 <img src="statusline-preview.svg" alt="statusline preview">
 
-**Line 1:** Model, effort level, working directory, git branch, context window, and session cost. The git branch is color-coded: **green** when clean, **yellow** when ahead of remote, and **red** when there are uncommitted changes.
+**Line 1:** Model, effort level, working directory, git branch, context window, and session cost. Effort is prefixed with `~` when extended thinking is active (e.g. `~high`). The git branch is color-coded: **green** when clean, **yellow** when ahead of remote, and **red** when there are uncommitted changes.
 
 **Line 2:** 5-hour and 7-day plan usage with reset countdowns. Only shown if you're on a Claude Pro or Max plan.
 
@@ -26,6 +26,4 @@ Add the following to your `.claude/settings.json` (global: `~/.claude/settings.j
 ## Requirements
 
 - `jq` — for parsing JSON input
-- `python3` — for formatting usage data
-- `curl` — for fetching plan usage from the API
 - `git` — for branch/status info

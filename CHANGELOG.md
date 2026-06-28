@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Extended thinking indicator: effort level is prefixed with `~` when thinking is enabled (e.g. `~high`)
+
+### Changed
+- Effort level now read from native `effort.level` JSON field instead of transcript parsing — reflects live mid-session `/effort` changes accurately
+- Plan usage now read from native `rate_limits.*` JSON fields instead of a separate Anthropic API call — eliminates caching, token management, and rate-limit handling code
+
+### Removed
+- OAuth API fetch for plan usage (no longer needed)
+- Local cache directory (`~/.cache/claude-statusline`) (no longer written to)
+
 ## [1.1.0] - 2026-06-28
 
 ### Removed

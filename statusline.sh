@@ -8,23 +8,18 @@ eval "$(echo "$input" | jq -r '
   @sh "used=\(.context_window.used_percentage // "")",
   @sh "total=\(.context_window.context_window_size // "")",
   @sh "cost=\(.cost.total_cost_usd // "")",
-  @sh "transcript=\(.transcript_path // "")"
+  @sh "effort=\(.effort.level // "")",
+  @sh "thinking=\(.thinking.enabled // "false")",
+  @sh "rl5h_pct=\(.rate_limits.five_hour.used_percentage // "")",
+  @sh "rl5h_resets=\(.rate_limits.five_hour.resets_at // "")",
+  @sh "rl7d_pct=\(.rate_limits.seven_day.used_percentage // "")",
+  @sh "rl7d_resets=\(.rate_limits.seven_day.resets_at // "")"
 ')"
 
-# Effort level: parse from transcript JSONL (most recent /model change), fall back to settings.json
-effort=""
-if [ -n "$transcript" ] && [ -f "$transcript" ]; then
-  effort=$(tac "$transcript" | sed -n 's/.*Set model to.* with \(low\|medium\|high\|max\) effort.*/\1/p' | head -1 2>/dev/null)
-fi
-if [ -z "$effort" ]; then
-  config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-  effort=$(jq -r '.effortLevel // empty' "$config_dir/settings.json" 2>/dev/null)
-fi
-[ -z "$effort" ] && effort="medium"
-
-# Git branch with status color
 ESC=$'\033'
 RESET="${ESC}[0m"
+
+# Git branch with status color
 git_branch=$(GIT_OPTIONAL_LOCKS=0 git -C "$cwd" symbolic-ref --short HEAD 2>/dev/null)
 branch_part=""
 if [ -n "$git_branch" ]; then
@@ -41,8 +36,6 @@ if [ -n "$git_branch" ]; then
 fi
 
 # Context: "used/max (pct%)"
-# used_percentage is null after /clear (no messages sent yet in new session).
-# In that case, fall back to 0% used but still show the window size.
 if [ -n "$total" ]; then
   used_val="${used:-0}"
   context_part=$(awk "BEGIN {
@@ -63,133 +56,52 @@ if [ -n "$cost" ]; then
   cost_part=$(awk "BEGIN { printf \"\$%.2f\", $cost + 0 }")
 fi
 
-# Plan usage (5-hour and 7-day utilization) via Anthropic OAuth API
+# Effort display — prefix ~ when extended thinking is active
+effort_display=""
+if [ -n "$effort" ]; then
+  [ "$thinking" = "true" ] && effort_display="~${effort}" || effort_display="$effort"
+fi
+
+# Plan usage from rate_limits (Pro/Max only — absent otherwise)
 usage_line=""
-cache_dir="$HOME/.cache/claude-statusline"
-cache_file="$cache_dir/usage.json"
-rate_limit_file="$cache_dir/rate-limited-until"
-cache_ttl=180
-config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-token=$(jq -r '.claudeAiOauth.accessToken // empty' "$config_dir/.credentials.json" 2>/dev/null)
-
-if [ -n "$token" ]; then
-  mkdir -p "$cache_dir"
+if [ -n "$rl5h_pct" ] || [ -n "$rl7d_pct" ]; then
   now=$(date +%s)
-  use_cache=false
-  rate_limited=false
 
-  # Check if we're currently rate limited
-  if [ -f "$rate_limit_file" ]; then
-    rate_limit_until=$(cat "$rate_limit_file" 2>/dev/null)
-    if [ "$now" -lt "$rate_limit_until" ] 2>/dev/null; then
-      use_cache=true
-      rate_limited=true
+  fmt_timer() {
+    local secs=$(( $1 < 0 ? 0 : $1 ))
+    local days=$(( secs / 86400 ))
+    local hours=$(( (secs % 86400) / 3600 ))
+    local mins=$(( (secs % 3600) / 60 ))
+    if [ "$days" -gt 0 ]; then
+      printf "%dd%02dh" "$days" "$hours"
+    elif [ "$hours" -gt 0 ]; then
+      printf "%dh%02dm" "$hours" "$mins"
     else
-      rm -f "$rate_limit_file"
+      printf "%dm" "$mins"
     fi
+  }
+
+  parts=()
+  if [ -n "$rl5h_pct" ] && [ -n "$rl5h_resets" ]; then
+    pct=$(awk "BEGIN { printf \"%d\", $rl5h_pct + 0 }")
+    timer=$(fmt_timer $(( rl5h_resets - now )))
+    parts+=("${pct}% resets ${timer}")
+  fi
+  if [ -n "$rl7d_pct" ] && [ -n "$rl7d_resets" ]; then
+    pct=$(awk "BEGIN { printf \"%d\", $rl7d_pct + 0 }")
+    timer=$(fmt_timer $(( rl7d_resets - now )))
+    parts+=("${pct}% resets ${timer}")
   fi
 
-  if [ "$rate_limited" = false ] && [ -f "$cache_file" ]; then
-    cache_age=$(( now - $(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file" 2>/dev/null || echo 0) ))
-    if [ "$cache_age" -lt "$cache_ttl" ]; then
-      use_cache=true
-    fi
-  fi
-
-  if [ "$use_cache" = false ]; then
-    headers_file=$(mktemp)
-    response=$(curl -s -D "$headers_file" --max-time 5 \
-      -H "Authorization: Bearer $token" \
-      -H "anthropic-beta: oauth-2025-04-20" \
-      "https://api.anthropic.com/api/oauth/usage" 2>/dev/null)
-    if echo "$response" | jq -e '.five_hour' >/dev/null 2>&1; then
-      tmp_cache=$(mktemp "$cache_dir/usage.XXXXXX")
-      echo "$response" > "$tmp_cache" && mv -f "$tmp_cache" "$cache_file"
-      # Save server time for accurate timer calculations
-      server_date=$(grep -i '^date:' "$headers_file" 2>/dev/null | tr -d '\r' | sed 's/^[Dd]ate: *//')
-      if [ -n "$server_date" ]; then
-        python3 -c "
-from email.utils import parsedate_to_datetime; import sys
-print(int(parsedate_to_datetime(sys.argv[1]).timestamp()))
-" "$server_date" 2>/dev/null > "$cache_dir/server-time"
-      fi
-      rm -f "$rate_limit_file"
-    elif echo "$response" | jq -e '.error.type == "rate_limit_error"' >/dev/null 2>&1; then
-      retry_after=$(grep -i 'retry-after' "$headers_file" 2>/dev/null | tr -d '\r' | awk '{print $2}')
-      [ -z "$retry_after" ] && retry_after=300
-      echo $(( now + retry_after )) > "$rate_limit_file"
-    fi
-    rm -f "$headers_file"
-  fi
-
-  if [ -f "$cache_file" ]; then
-    # Derive accurate current time: server_time + seconds_elapsed_since_cache
-    server_time_file="$cache_dir/server-time"
-    cache_mtime=$(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file" 2>/dev/null || echo 0)
-    local_elapsed=$(( now - cache_mtime ))
-    [ "$local_elapsed" -lt 0 ] && local_elapsed=0
-
-    usage_line=$(python3 -c "
-import json, datetime, sys, os
-
-with open(sys.argv[1]) as f:
-    data = json.load(f)
-
-# Use server time + local elapsed for accurate 'now'
-server_time_file = sys.argv[3]
-local_elapsed = int(sys.argv[4])
-try:
-    with open(server_time_file) as f:
-        server_epoch = int(f.read().strip())
-    now = datetime.datetime.fromtimestamp(server_epoch + local_elapsed, tz=datetime.timezone.utc)
-except:
-    now = datetime.datetime.now(datetime.timezone.utc)
-
-def fmt_timer(total_secs):
-    days, rem = divmod(total_secs, 86400)
-    hours, rem = divmod(rem, 3600)
-    minutes = rem // 60
-    if days > 0:
-        return f'{days}d{hours:02d}h'
-    elif hours > 0:
-        return f'{hours}h{minutes:02d}m'
-    else:
-        return f'{minutes}m'
-
-parts = []
-for key in ['five_hour', 'seven_day']:
-    block = data.get(key)
-    if not block:
-        continue
-    pct = block.get('utilization', 0)
-    resets_at = block.get('resets_at', '')
-    if resets_at:
-        reset_dt = datetime.datetime.fromisoformat(resets_at)
-        diff = reset_dt - now
-        timer = fmt_timer(max(0, int(diff.total_seconds())))
-    else:
-        timer = '?'
-    parts.append(f'{pct:.0f}% resets {timer}')
-
-# Rate limit indicator
-rate_limit_msg = ''
-try:
-    with open(sys.argv[2]) as f:
-        until = int(f.read().strip())
-    remaining = until - int(now.timestamp())
-    if remaining > 0:
-        rate_limit_msg = f' | rate-limited for {fmt_timer(remaining)}'
-except:
-    pass
-
-if parts:
-    print(' \u00b7 '.join(parts) + rate_limit_msg)
-" "$cache_file" "$rate_limit_file" "$server_time_file" "$local_elapsed" 2>/dev/null)
+  if [ ${#parts[@]} -gt 0 ]; then
+    IFS=' · '
+    usage_line="${parts[*]}"
+    unset IFS
   fi
 fi
 
 printf "\033[1;34m%s\033[0m \033[3;90m%s\033[0m \033[38;5;28m%s\033[0m%s %s %s" \
-  "$model" "$effort" "$cwd" "$branch_part" "$context_part" "$cost_part"
+  "$model" "$effort_display" "$cwd" "$branch_part" "$context_part" "$cost_part"
 if [ -n "$usage_line" ]; then
   printf "\n%s" "$usage_line"
 fi
