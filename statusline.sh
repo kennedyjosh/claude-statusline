@@ -56,11 +56,7 @@ if [ -n "$cost" ]; then
   cost_part=$(awk "BEGIN { printf \"\$%.2f\", $cost + 0 }")
 fi
 
-# Effort display — prefix ~ when extended thinking is active
-effort_display=""
-if [ -n "$effort" ]; then
-  [ "$thinking" = "true" ] && effort_display="~${effort}" || effort_display="$effort"
-fi
+effort_display="$effort"
 
 # Plan usage from rate_limits (Pro/Max only — absent otherwise)
 usage_line=""

@@ -6,8 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Added
-- Extended thinking indicator: effort level is prefixed with `~` when thinking is enabled (e.g. `~high`)
+## [1.2.0] - 2026-06-28
 
 ### Changed
 - Effort level now read from native `effort.level` JSON field instead of transcript parsing — reflects live mid-session `/effort` changes accurately
