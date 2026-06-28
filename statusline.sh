@@ -30,7 +30,7 @@ if [ -n "$git_branch" ]; then
   elif [ "${git_ahead:-0}" -gt 0 ] 2>/dev/null; then
     branch_color="${ESC}[0;33m"
   else
-    branch_color="${ESC}[0;32m"
+    branch_color="${ESC}[38;5;28m"
   fi
   branch_part=" ⎇ ${branch_color}${git_branch}${RESET}"
 fi
